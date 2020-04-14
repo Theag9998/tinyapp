@@ -46,6 +46,7 @@ app.get("/hello", (req, res) => {
 app.get("/urls", (req, res) => {
 	let templateVars = {urls: urlDatabase}
 	res.render("urls_index", templateVars)
+
 })
 
 app.get("/urls/new", (req, res) => {
@@ -72,3 +73,11 @@ app.get("/u/:shortURL", (req, res) => {
 	
   res.redirect(longURL);
 });
+
+app.post("/urls/:shortURL/delete", (req, res) => {
+
+ delete urlDatabase[req.params.shortURL]
+	//console.log(urlDatabase)
+	res.redirect("/urls");
+	
+})
