@@ -3,8 +3,18 @@ const app = express();
 const PORT = 8080; // default port 8080
 
 function generateRandomString() {
-
+	let newRandomString = "";
+	for (var i = 0; i < 6; i++){
+			newRandomString += randomCharacter();
+	}
+	return newRandomString;
 }
+
+function randomCharacter() {
+let chars = "0123456789abcdefghijklmnopqurstuvwxyzABCDEFGHIJKLMNOPQURSTUVWXYZ";
+return chars.substr(Math.floor(Math.random() * 62), 1);
+}
+console.log(generateRandomString())
 
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
