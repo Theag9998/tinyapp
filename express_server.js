@@ -60,11 +60,11 @@ app.get("/urls/:shortURL", (req, res) => {
 });
 app.post("/urls", (req, res) => {
 	// Log the POST request body of longUrlto the console
-	console.log(req.body['longURL']);  
+	//console.log(req.body['longURL']);  
 	// update the url database so new shortUrls are saved
 	urlDatabase[uniqueShortURL] = req.body['longURL'];
 	// log the new urlDatabase to console
-	console.log(urlDatabase)
+	//console.log(urlDatabase)
 	// Respond with 'Ok' (we will replace this)
 	res.redirect(`/urls/${uniqueShortURL}`);
 });
@@ -73,7 +73,7 @@ app.get("/u/:shortURL", (req, res) => {
 	
   res.redirect(longURL);
 });
-
+//delete url 
 app.post("/urls/:shortURL/delete", (req, res) => {
 
  delete urlDatabase[req.params.shortURL]
@@ -81,3 +81,10 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 	res.redirect("/urls");
 	
 })
+//update url
+app.post("/urls/:shortURL", (req, res) => {
+	
+	 //console.log(req.params.shortURL)
+	 res.redirect(`/urls/${req.params.shortURL}`);
+	 
+ })
