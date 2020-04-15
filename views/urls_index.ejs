@@ -12,7 +12,6 @@
 	<main style="margin: 1em;">
 		<%- include('partials/_header') %>
 		<h3>My URLs</h3>
-		<a href='#'>Shorten new url</a> 
     <table class="table">
       <thead>
         <tr>
@@ -26,9 +25,7 @@
 				
 				<% for(let url in urls) { %>
           <tr>
-						
-					
-							<td><%= url %></td>
+		          <td><%= url %></td>
                 <td><%= urls[url] %></td>
                 <td><form method="POST" action="/urls/<%= url %>"><button>edit</button></form></td>
 							<td><form method="POST" action="/urls/<%= url %>/delete"><button>delete</button></form></td>

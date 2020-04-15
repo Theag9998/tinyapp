@@ -55,14 +55,16 @@ app.get("/urls/new", (req, res) => {
 
 app.get("/urls/:shortURL", (req, res) => {
   // /urls/:shortURL -> /urls/ABC123 -> req.params.shortURL === 'ABC123'
-  let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
+  let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] }; 
   res.render("urls_show", templateVars);
 });
 app.post("/urls", (req, res) => {
 	// Log the POST request body of longUrlto the console
 	//console.log(req.body['longURL']);  
+
 	// update the url database so new shortUrls are saved
 	urlDatabase[uniqueShortURL] = req.body['longURL'];
+	
 	// log the new urlDatabase to console
 	//console.log(urlDatabase)
 	// Respond with 'Ok' (we will replace this)
