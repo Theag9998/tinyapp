@@ -1,5 +1,7 @@
 const express = require("express");
+const cookieParser = require('cookie-parser');
 const app = express();
+app.use(cookieParser());
 const PORT = 8080; // default port 8080
 
 function generateRandomString() {
@@ -44,27 +46,25 @@ app.get("/hello", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-	let templateVars = {urls: urlDatabase}
+	let templateVars = {username: req.cookies["username"], urls: urlDatabase}
 	res.render("urls_index", templateVars)
-
 })
 
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+	let templateVars = { username: req.cookies["username"]}
+  res.render("urls_new", templateVars);
 });
 
 app.get("/urls/:shortURL", (req, res) => {
   // /urls/:shortURL -> /urls/ABC123 -> req.params.shortURL === 'ABC123'
-  let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] }; 
-  res.render("urls_show", templateVars);
+  let templateVars = { username: req.cookies["username"], shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] }; 
+	res.render("urls_show", templateVars);
 });
 app.post("/urls", (req, res) => {
 	// Log the POST request body of longUrlto the console
 	//console.log(req.body['longURL']);  
-
 	// update the url database so new shortUrls are saved
 	urlDatabase[uniqueShortURL] = req.body['longURL'];
-	
 	// log the new urlDatabase to console
 	//console.log(urlDatabase)
 	// Respond with 'Ok' (we will replace this)
@@ -90,3 +90,17 @@ app.post("/urls/:shortURL", (req, res) => {
 	 res.redirect(`/urls/${req.params.shortURL}`);
 	 
  })
+//add end point to /login and create username cookies
+ app.post("/login", (req, res) => {
+	res.cookie("username", req.body['username'])
+
+	res.redirect("/urls")
+})
+
+//add end point to /logout and remove the username cookies
+app.post("/logout", (req, res) => {
+
+	res.clearCookie("username")
+
+	res.redirect("/urls")
+})
