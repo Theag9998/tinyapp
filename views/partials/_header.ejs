@@ -12,14 +12,14 @@
         <% if (userID) { %>
           <h5> Logged in as: <%= userID['email'] %> </h5>
             <form action="/logout" method="POST">
-              <button>Logout</button>
+              <button class="form-control">Logout</button>
             </form>
           
           <% } else { %>
         <form action="/login" method="POST">
-          <input name="username" placeholder="Username">
+          <a class="nav-item nav-link" href="/login">Login</a>
+          <a class="nav-item nav-link" href="/register">Register here</a>
           
-          <button>Login</button>
         </form>
        <% } %>
       </div>
