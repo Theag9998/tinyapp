@@ -1,5 +1,5 @@
 const express = require("express");
-const cookieParser = require('cookie-parser');
+const cookieSession = require('cookie-session');
 const bodyParser = require("body-parser");
 const bcrypt = require('bcrypt');
 const app = express();
@@ -7,7 +7,10 @@ const PORT = 8080; // default port 8080
 //access random string generator
 const generateRandomString = require("./randomStringGenerator")
 //access cookies
-app.use(cookieParser());
+app.use(cookieSession({
+	name: 'session', 
+	keys: ['user_id']
+}));
 app.use(bodyParser.urlencoded({extended: true}));
 //use EJS as templating engine
 app.set("view engine", "ejs");
@@ -32,21 +35,22 @@ const urlDatabase = {
 
 //an object which will be used to store and access the users registered
 const users = { 
-//   "theabo": {
-//     id: "theabo", 
-//     email: "thea@example.com", 
-//     password: "12345"
-//   },
-//  "tommyboi": {
-//     id: "tommyboi", 
-//     email: "thomas1@example.com", 
-//     password: "5678"
-//   }
+  "theabo": {
+    id: "theabo", 
+    email: "thea@example.com", 
+    password: "12345"
+  },
+ "tommyboi": {
+    id: "tommyboi", 
+    email: "thomas1@example.com", 
+    password: "5678"
+  }
 }
 
 app.get("/", (req, res) => {
 	//set cookieID to the cookie user_id
-	const cookieID = req.cookies['user_id']
+	const cookieID = req.session.user_id
+	//const cookieID = req.cookies['user_id']
 	//set currentID to the users ID if the cookieID is found
 	const currentID = idWithCookie(cookieID)
 	const userID = currentID
@@ -59,7 +63,7 @@ app.get("/", (req, res) => {
 
 //display the register page
 app.get("/register", (req, res) => {
-	let templateVars = { userID: users[req.cookies['user_id']]};
+	let templateVars = { userID: users[req.session.user_id]};
   res.render("register", templateVars);
 });
 
@@ -80,7 +84,8 @@ app.post("/register", (req, res) => {
 			//update the users database with a unique id so new email and hashed password are saved
 			users[uniqueID] = {'id': uniqueID, email, hashedPassword}
 			//set a userID cookie containing the new generated ID
-			res.cookie("user_id", uniqueID);
+			//res.cookie("user_id", uniqueID);
+			req.session.user_id = uniqueID
 		}
 	//after being registered redirect to /urls
 	res.redirect("/urls")
@@ -88,7 +93,7 @@ app.post("/register", (req, res) => {
 
 //display the login page
 app.get("/login", (req, res) => {
-	let templateVars = { userID: users[req.cookies['user_id']]};
+	let templateVars = { userID: users[req.session.user_id]};
   res.render("login", templateVars);
 });
 
@@ -111,7 +116,8 @@ app.post("/login", (req, res) => {
 	//if someone enters an email and a matching password log them in and start a cookie
 		if (emailLookUp(email) && passwordCompare === true) {
 		//set a userID cookie containing the logged in ID of the user
-			res.cookie("user_id", currentId);
+			//res.cookie("user_id", currentId);
+			req.session.user_id = currentId;
 		//if email exists but the password does not match 
 		} else if (emailLookUp(email) && passwordCompare === false) {
 			res.status(403).send("Error 403 password does not match")
@@ -125,7 +131,8 @@ app.post("/login", (req, res) => {
 
 //add end point to /logout and remove the user_id cookies
 app.post("/logout", (req, res) => {
-	res.clearCookie("user_id")
+	//res.clearCookie("user_id")
+	req.session = null
 	res.redirect("/urls")
 })
 
@@ -139,17 +146,17 @@ app.get("/u/:shortURL", (req, res) => {
 app.get("/urls", (req, res) => {
 //check if the user is logged in/registered by requesting cookies
 	//set cookieID to the cookie user_id
-	const cookieID = req.cookies['user_id']
+	const cookieID = req.session.user_id
 	//set currentID to the users ID if the cookieID is found
 	const currentID = idWithCookie(cookieID)
 	//if the user exists allow them to view webpage
 	if (currentID) {
 		//only show the urls created by the individual user
-		let templateVars = { userID: users[req.cookies['user_id']], urls: urlsForUser(cookieID)}
+		let templateVars = { userID: users[req.session.user_id], urls: urlsForUser(cookieID)}
 		res.render("urls_index", templateVars)
 	//if the user is not logged in/registered display message
 	} else {
-		templateVars = { userID: users[req.cookies['user_id']]}
+		templateVars = { userID: users[req.session.user_id]}
 		res.render("urls_index", templateVars)
 	}
 })
@@ -157,7 +164,7 @@ app.get("/urls", (req, res) => {
 //add a new short url to the urlDatabase when given a longURl
 app.post("/urls", (req, res) => {
 	//set cookieID to the cookie user_id
-	const cookieID = req.cookies['user_id']
+	const cookieID = req.session.user_id
 	//set currentID to the users ID if the cookieID is found
 	const currentID = idWithCookie(cookieID)
 	const userID = currentID
@@ -173,12 +180,12 @@ app.post("/urls", (req, res) => {
 app.get("/urls/new", (req, res) => {
 	//check if the user is logged in/registered by requesting cookies
 	//set cookieID to the cookie user_id
-	const cookieID = req.cookies['user_id']
+	const cookieID = req.session.user_id
 	//set currentID to the users ID if the cookieID is found
 	const currentID = idWithCookie(cookieID)
 	//if the user exists allow them to view webpage
 	if (currentID) {
-		let templateVars = { userID: users[req.cookies['user_id']]}
+		let templateVars = { userID: users[req.session.user_id]}
   	res.render("urls_new", templateVars);
 	} else {
 		//if the user is not found redirect to login
@@ -189,7 +196,7 @@ app.get("/urls/new", (req, res) => {
 //display the unique short url page for the user that created the shortUrl
 app.get("/urls/:shortURL", (req, res) => {
 	//set cookieID to the cookie user_id
-	const cookieID = req.cookies['user_id']
+	const cookieID = req.session.user_id
 	//set currentID to the users ID if the cookieID is found
 	const currentID = idWithCookie(cookieID)
 	//set urlForID to equal the object that contains the specific users URLS
@@ -199,16 +206,16 @@ app.get("/urls/:shortURL", (req, res) => {
 		//if the shortUrl is equal to the shorturl in users url database
 		if (checkShortUrl(req.params.shortURL, urlForID)) {
 			//show the webpage
-			let templateVars = { userUrl: checkShortUrl(req.params.shortURL, urlForID), userID: users[req.cookies['user_id']], shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL]['longURL'] };
+			let templateVars = { userUrl: checkShortUrl(req.params.shortURL, urlForID), userID: users[req.session.user_id], shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL]['longURL'] };
 			res.render("urls_show", templateVars);
 		//
 		} else {
-			let templateVars = { userUrl: checkShortUrl(req.params.shortURL, urlForID), userID: users[req.cookies['user_id']]};
+			let templateVars = { userUrl: checkShortUrl(req.params.shortURL, urlForID), userID: users[req.session.user_id]};
 			res.render("urls_show", templateVars);
 		}
 		
 	} else {
-	res.send("please login");
+	res.redirect("/login");
 	}
 	
 });
@@ -217,7 +224,7 @@ app.get("/urls/:shortURL", (req, res) => {
 app.post("/urls/:shortURL/delete", (req, res) => {
 	//check if the current user is the one that created the url that wants to be deleted
 	//set cookieID to the cookie user_id
-	const cookieID = req.cookies['user_id']
+	const cookieID = req.session.user_id
 	//set currentID to the users ID if the cookieID is found
 	const currentID = idWithCookie(cookieID)
 	//set urlForID to equal the object that contains the specific users URLS
@@ -237,7 +244,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 app.post("/urls/:shortURL", (req, res) => {
 		//check if the current user is the one that created the url that wants to be deleted
 	//set cookieID to the cookie user_id
-	const cookieID = req.cookies['user_id']
+	const cookieID = req.session.user_id
 	//set currentID to the users ID if the cookieID is found
 	const currentID = idWithCookie(cookieID)
 	//set urlForID to equal the object that contains the specific users URLS
