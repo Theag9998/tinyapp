@@ -1,6 +1,7 @@
 const express = require("express");
 const cookieParser = require('cookie-parser');
 const bodyParser = require("body-parser");
+const bcrypt = require('bcrypt');
 const app = express();
 const PORT = 8080; // default port 8080
 //access random string generator
@@ -31,16 +32,16 @@ const urlDatabase = {
 
 //an object which will be used to store and access the users registered
 const users = { 
-  "theabo": {
-    id: "theabo", 
-    email: "thea@example.com", 
-    password: "12345"
-  },
- "tommyboi": {
-    id: "tommyboi", 
-    email: "thomas1@example.com", 
-    password: "5678"
-  }
+//   "theabo": {
+//     id: "theabo", 
+//     email: "thea@example.com", 
+//     password: "12345"
+//   },
+//  "tommyboi": {
+//     id: "tommyboi", 
+//     email: "thomas1@example.com", 
+//     password: "5678"
+//   }
 }
 
 app.get("/", (req, res) => {
@@ -66,6 +67,8 @@ app.get("/register", (req, res) => {
 app.post("/register", (req, res) => {
 	//get the info from body for email and password that was entered
 	const {email, password} = req.body;
+	//hash the password
+	const hashedPassword = bcrypt.hashSync(password, 10);
 	//if email or password entered are empty string send back 404 status
 	if (email === "" || password === "") {
 		res.status(400).send("Error 400 please enter email hi or password")
@@ -74,8 +77,8 @@ app.post("/register", (req, res) => {
 		if (emailLookUp(email)) {
 		res.status(400).send("Error 400 email already exists")
 		} else {
-			//update the users database with a unique id so new email and password are saved
-			users[uniqueID] = {'id': uniqueID, email, password}
+			//update the users database with a unique id so new email and hashed password are saved
+			users[uniqueID] = {'id': uniqueID, email, hashedPassword}
 			//set a userID cookie containing the new generated ID
 			res.cookie("user_id", uniqueID);
 		}
@@ -93,21 +96,24 @@ app.get("/login", (req, res) => {
 app.post("/login", (req, res) => {
 	//get the info from body for email and password
 	const { email, password} = req.body;
+	//hash the password that was entered
+	const hashedPassword = bcrypt.hashSync(password, 10);
 	//obtain the current Id of the user associated with that email
 	const currentId = emailLookUp(email);
 	//access the specific user object in users in order to get their password value
 	const existingUser = users[currentId];
-
+	//need to compare the users password to the one was hashed and entered
+	const passwordCompare = bcrypt.compareSync(existingUser.password, hashedPassword)
 	//if email or password are empty string send back 404 status
 	if (email === "" || password === "") {
 		res.status(403).send("Error 404 please enter email or password")
 	}
 	//if someone enters an email and a matching password log them in and start a cookie
-		if (emailLookUp(email) && existingUser.password === password) {
+		if (emailLookUp(email) && passwordCompare === true) {
 		//set a userID cookie containing the logged in ID of the user
 			res.cookie("user_id", currentId);
 		//if email exists but the password does not match 
-		} else if (emailLookUp(email) && existingUser.password !== password) {
+		} else if (emailLookUp(email) && passwordCompare === false) {
 			res.status(403).send("Error 403 password does not match")
 		//if email does not exist
 		} else {
