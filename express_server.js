@@ -6,6 +6,8 @@ const app = express();
 const PORT = 8080; // default port 8080
 //access random string generator
 const generateRandomString = require("./randomStringGenerator")
+//access helper functions
+const {emailLookUp, checkShortUrl, urlsForUser, idWithCookie} = require("./helpers");
 //access cookies
 app.use(cookieSession({
 	name: 'session', 
@@ -50,9 +52,8 @@ const users = {
 app.get("/", (req, res) => {
 	//set cookieID to the cookie user_id
 	const cookieID = req.session.user_id
-	//const cookieID = req.cookies['user_id']
 	//set currentID to the users ID if the cookieID is found
-	const currentID = idWithCookie(cookieID)
+	const currentID = idWithCookie(cookieID, users)
 	const userID = currentID
 	if (userID) {
 		res.redirect("/urls")
@@ -75,10 +76,10 @@ app.post("/register", (req, res) => {
 	const hashedPassword = bcrypt.hashSync(password, 10);
 	//if email or password entered are empty string send back 404 status
 	if (email === "" || password === "") {
-		res.status(400).send("Error 400 please enter email hi or password")
+		res.status(400).send("Error 400 please enter email or password")
 	}
 		//if someone registers with an email that already exists in users return 404 status
-		if (emailLookUp(email)) {
+		if (emailLookUp(email, users)) {
 		res.status(400).send("Error 400 email already exists")
 		} else {
 			//update the users database with a unique id so new email and hashed password are saved
@@ -104,27 +105,30 @@ app.post("/login", (req, res) => {
 	//hash the password that was entered
 	const hashedPassword = bcrypt.hashSync(password, 10);
 	//obtain the current Id of the user associated with that email
-	const currentId = emailLookUp(email);
+	const currentId = emailLookUp(email, users);
+	
+	//if email or password are empty string send back 404 status
+		if (email === "" || password === "") {
+			res.status(403).send("Error 404 please enter email or password")
+		}
+		//if the email does not exist 
+		if (!currentId) {
+			res.status(403).send("Error 403 email cannot be found")
+			}
 	//access the specific user object in users in order to get their password value
 	const existingUser = users[currentId];
 	//need to compare the users password to the one was hashed and entered
 	const passwordCompare = bcrypt.compareSync(existingUser.password, hashedPassword)
-	//if email or password are empty string send back 404 status
-	if (email === "" || password === "") {
-		res.status(403).send("Error 404 please enter email or password")
-	}
 	//if someone enters an email and a matching password log them in and start a cookie
-		if (emailLookUp(email) && passwordCompare === true) {
-		//set a userID cookie containing the logged in ID of the user
-			//res.cookie("user_id", currentId);
-			req.session.user_id = currentId;
-		//if email exists but the password does not match 
-		} else if (emailLookUp(email) && passwordCompare === false) {
-			res.status(403).send("Error 403 password does not match")
-		//if email does not exist
-		} else {
-			res.status(403).send("Error 403 email cannot be found")
-		}
+			if (currentId && passwordCompare === true) {
+				//set a userID cookie containing the logged in ID of the user
+				//res.cookie("user_id", currentId);
+				req.session.user_id = currentId;
+			//if email exists but the password does not match 
+			} else if (currentId && passwordCompare === false) {
+				res.status(403).send("Error 403 password does not match")
+			} 
+			
 	//after being logged in redirect to /urls
 	res.redirect("/urls")
 })
@@ -148,11 +152,11 @@ app.get("/urls", (req, res) => {
 	//set cookieID to the cookie user_id
 	const cookieID = req.session.user_id
 	//set currentID to the users ID if the cookieID is found
-	const currentID = idWithCookie(cookieID)
+	const currentID = idWithCookie(cookieID, users)
 	//if the user exists allow them to view webpage
 	if (currentID) {
 		//only show the urls created by the individual user
-		let templateVars = { userID: users[req.session.user_id], urls: urlsForUser(cookieID)}
+		let templateVars = { userID: users[req.session.user_id], urls: urlsForUser(cookieID, urlDatabase)}
 		res.render("urls_index", templateVars)
 	//if the user is not logged in/registered display message
 	} else {
@@ -166,7 +170,7 @@ app.post("/urls", (req, res) => {
 	//set cookieID to the cookie user_id
 	const cookieID = req.session.user_id
 	//set currentID to the users ID if the cookieID is found
-	const currentID = idWithCookie(cookieID)
+	const currentID = idWithCookie(cookieID, users)
 	const userID = currentID
 	//access long url from the input from page
 	const {longURL} = req.body
@@ -182,7 +186,7 @@ app.get("/urls/new", (req, res) => {
 	//set cookieID to the cookie user_id
 	const cookieID = req.session.user_id
 	//set currentID to the users ID if the cookieID is found
-	const currentID = idWithCookie(cookieID)
+	const currentID = idWithCookie(cookieID, users)
 	//if the user exists allow them to view webpage
 	if (currentID) {
 		let templateVars = { userID: users[req.session.user_id]}
@@ -198,9 +202,9 @@ app.get("/urls/:shortURL", (req, res) => {
 	//set cookieID to the cookie user_id
 	const cookieID = req.session.user_id
 	//set currentID to the users ID if the cookieID is found
-	const currentID = idWithCookie(cookieID)
+	const currentID = idWithCookie(cookieID, users)
 	//set urlForID to equal the object that contains the specific users URLS
-	const urlForID = urlsForUser(currentID)
+	const urlForID = urlsForUser(currentID, urlDatabase)
 	//if the user exists allow them to view webpage of the specific short url
 	if (currentID) {
 		//if the shortUrl is equal to the shorturl in users url database
@@ -226,9 +230,9 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 	//set cookieID to the cookie user_id
 	const cookieID = req.session.user_id
 	//set currentID to the users ID if the cookieID is found
-	const currentID = idWithCookie(cookieID)
+	const currentID = idWithCookie(cookieID, users)
 	//set urlForID to equal the object that contains the specific users URLS
-	const urlForID = urlsForUser(currentID)
+	const urlForID = urlsForUser(currentID, urlDatabase)
 	//if the user exists and is logged in
 	if (currentID) {
 		//if the shortUrl is equal to the shorturl in users url database 
@@ -246,9 +250,9 @@ app.post("/urls/:shortURL", (req, res) => {
 	//set cookieID to the cookie user_id
 	const cookieID = req.session.user_id
 	//set currentID to the users ID if the cookieID is found
-	const currentID = idWithCookie(cookieID)
+	const currentID = idWithCookie(cookieID, users)
 	//set urlForID to equal the object that contains the specific users URLS
-	const urlForID = urlsForUser(currentID)
+	const urlForID = urlsForUser(currentID, urlDatabase)
 	//if the user exists and is logged in
 	if (currentID) {
 		//if the shortUrl is equal to the shorturl in users url database 
@@ -261,58 +265,4 @@ app.post("/urls/:shortURL", (req, res) => {
 			res.redirect('/urls');
 		}
 	}
-})
-
-
-
-
-//email look up function
-const emailLookUp = function(email) {
-	//search through users to see if email entered is already registered
-	for (key in users) {
-		//if the email given is in the users object database
-		//return the id that is associated with that specific user
-		if (email === users[key]['email']) {
-			return users[key]['id']
-		} 
-	}
-	return false
-}
-
-//searching if the cookieid is equal to a user's ID in the users database
-const idWithCookie = function(cookieid) {
-	//loop through the users object to compare cookieID to a users ID
-	for (key in users) {
-		//if the cookieID and usersID are equal return that users ID
-		if (cookieid === users[key]['id']) {
-			return users[key]['id']
-		} 
-	}
-	return false
-}
-
-//need to compare cookie usersId with the user id in the url database
-const urlsForUser = function (id) {
-	//want to store the urls for that user
-	const usersUrl = {}
-	//loop through the shortURL keys in the  urldatabase
-	for (key in urlDatabase) {
-		//if the current cookieID is equal to the userID of the added url
-		if (id === urlDatabase[key]['userID']) {
-			//add the whole shortURL object into the usersUrl in case they have multiple urls
-			usersUrl[key] = urlDatabase[key];
-		}
-	}
-	return usersUrl
-}
-
-//check if the short url is equal to one the the short urls in the users urls
-const checkShortUrl = function (shortUrl, urlsForUser) {
-	//loop through the users urls
-	for (let key in urlsForUser) {
-		//if the short url is equal to the short url in the users urls
-		if (shortUrl === key) {
-			return true
-		}
-	}
-}
+});
