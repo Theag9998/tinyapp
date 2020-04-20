@@ -23,10 +23,6 @@ let uniqueShortURL = generateRandomString;
 //unique Id for a new registered user
 let uniqueID = generateRandomString;
 
-//when server is running log the port its on
-app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}!`);
-});
 
 //an object with the list of urls in the database
 const urlDatabase = {
@@ -77,7 +73,7 @@ app.post("/register", (req, res) => {
   //hash the password
   const hashedPassword = bcrypt.hashSync(password, 10);
   //if email or password entered are empty string send back 404 status
-  if (email === "" || password === "") {
+  if (!email || !password) {
     res.status(400).send("Error 400 please enter email or password");
   }
   //if someone registers with an email that already exists in users return 404 status
@@ -114,13 +110,12 @@ app.get("/login", (req, res) => {
 app.post("/login", (req, res) => {
   //get the info from body for email and password
   const { email, password} = req.body;
-  //hash the password that was entered
-  const hashedPassword = bcrypt.hashSync(password, 10);
+  
   //obtain the current Id of the user associated with that email
   const currentId = emailLookUp(email, users);
 	
   //if email or password are empty string send back 404 status
-  if (email === "" || password === "") {
+  if (!email || !password) {
     res.status(403).send("Error 404 please enter email or password");
   }
   //if the email does not exist
@@ -129,8 +124,9 @@ app.post("/login", (req, res) => {
   }
   //access the specific user object in users in order to get their password value
   const existingUser = users[currentId];
-  //need to compare the users password to the one was hashed and entered
-  const passwordCompare = bcrypt.compareSync(existingUser.password, hashedPassword);
+  
+  //need to compare the users hashed password to the one that was entered
+  const passwordCompare = bcrypt.compareSync(password, existingUser.hashedPassword);
   //if someone enters an email and a matching password log them in and start a cookie
   if (currentId && passwordCompare === true) {
     //set a userID cookie containing the logged in ID of the user
@@ -274,4 +270,9 @@ app.post("/urls/:shortURL", (req, res) => {
       res.redirect('/urls');
     }
   }
+});
+
+//when server is running log the port its on
+app.listen(PORT, () => {
+  console.log(`Example app listening on port ${PORT}!`);
 });
