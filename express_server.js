@@ -4,8 +4,7 @@ const bodyParser = require("body-parser");
 const bcrypt = require('bcrypt');
 const app = express();
 const PORT = 8080; // default port 8080
-//access random string generator
-const generateRandomString = require("./randomStringGenerator");
+
 //access helper functions
 const {emailLookUp, checkShortUrl, urlsForUser, idWithCookie} = require("./helpers");
 //access cookies
@@ -17,17 +16,29 @@ app.use(bodyParser.urlencoded({extended: true}));
 //use EJS as templating engine
 app.set("view engine", "ejs");
 
+//display six random characters into a string for the short url
+const generateRandomString = function() {
+  let newRandomString = "";
+  for (let i = 0; i < 6; i++) {
+    newRandomString += randomCharacter();
+  }
+  return newRandomString;
+};
+//create a random string for the short url
+const randomCharacter = function() {
+  let chars = "0123456789abcdefghijklmnopqurstuvwxyzABCDEFGHIJKLMNOPQURSTUVWXYZ";
+  return chars.substr(Math.floor(Math.random() * 62), 1);
+};
 
-//unique url is equal to the new random string
-let uniqueShortURL = generateRandomString;
+
 //unique Id for a new registered user
-let uniqueID = generateRandomString;
+let uniqueID = generateRandomString();
 
 
 //an object with the list of urls in the database
 const urlDatabase = {
-  "b2xVn2": {longURL: "http://www.lighthouselabs.ca", userID: "theabo"},
-  "9sm5xK": {longURL: "http://www.google.com", userID: "tommyboi"}
+  // "b2xVn2": {longURL: "http://www.lighthouselabs.ca", userID: "theabo"},
+  // "9sm5xK": {longURL: "http://www.google.com", userID: "tommyboi"}
 };
 
 //an object which will be used to store and access the users registered
@@ -173,6 +184,8 @@ app.get("/urls", (req, res) => {
 
 //add a new short url to the urlDatabase when given a longURl
 app.post("/urls", (req, res) => {
+  //unique url is equal to the new random string
+  let uniqueShortURL = generateRandomString();
   //set cookieID to the cookie user_id
   const cookieID = req.session.user_id;
   //set currentID to the users ID if the cookieID is found
