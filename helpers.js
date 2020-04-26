@@ -50,4 +50,15 @@ const checkShortUrl = function(shortUrl, urlsForUser) {
   }
 };
 
-module.exports = {emailLookUp, checkShortUrl, urlsForUser, idWithCookie};
+//check if the short url exists in the database
+const checkShortUrlDatabase = function(shortUrl, urlDatabase) {
+  //loop through the users urls
+  for (let key in urlDatabase) {
+    //if the short url exist in database
+    if (shortUrl === key) {
+      return true;
+    }
+  }
+};
+
+module.exports = {emailLookUp, checkShortUrl, urlsForUser, idWithCookie, checkShortUrlDatabase};
